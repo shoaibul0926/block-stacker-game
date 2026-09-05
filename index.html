@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block Stacker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: radial-gradient(ellipse at center, #0a0d2a 0%, #000000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  #gameWrap {
+    position: relative;
+    border: 3px solid #5b6ee1;
+    border-radius: 8px;
+    box-shadow: 0 0 25px #5b6ee188, inset 0 0 25px #10133388;
+    background: #000;
+  }
+
+  canvas {
+    display: block;
+    background: #060818;
+    touch-action: none;
+  }
+
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    justify-content: space-between;
+    color: #c8ceff;
+    font-size: 15px;
+    text-shadow: 0 0 8px #5b6ee1;
+    pointer-events: none;
+    letter-spacing: 1px;
+  }
+
+  #muteBtn {
+    position: absolute;
+    top: 40px;
+    right: 12px;
+    z-index: 5;
+    background: rgba(10, 12, 40, 0.6);
+    border: 1px solid #5b6ee188;
+    color: #c8ceff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  #touchControls {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0 10px;
+  }
+  .tbtn {
+    width: 52px;
+    height: 44px;
+    border-radius: 8px;
+    background: rgba(91,110,225,0.18);
+    border: 1px solid #5b6ee188;
+    color: #c8ceff;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .tbtn:active { background: rgba(91,110,225,0.4); }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(6, 8, 24, 0.94);
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .screen.active { display: flex; }
+
+  .logo {
+    font-size: 28px;
+    color: #5b6ee1;
+    text-shadow: 0 0 20px #5b6ee1;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+
+  .subtitle {
+    color: #c8ceff;
+    margin: 4px 0 14px;
+    font-size: 14px;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+
+  .big-score {
+    font-size: 34px;
+    color: #ffe94a;
+    margin: 6px 0;
+    text-shadow: 0 0 10px #ffb700;
+  }
+
+  .menu-btn {
+    margin-top: 10px;
+    padding: 11px 30px;
+    font-size: 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    font-weight: bold;
+    transition: transform 0.1s;
+    width: 220px;
+    max-width: 80%;
+  }
+  .menu-btn:hover { transform: scale(1.05); }
+  .menu-btn:active { transform: scale(0.97); }
+  .menu-btn.primary { background: linear-gradient(180deg, #5b6ee1, #2c3aa0); color: #05061a; box-shadow: 0 0 15px #5b6ee199; }
+  .menu-btn.secondary { background: linear-gradient(180deg, #1c2255, #121737); color: #c8ceff; border: 1px solid #5b6ee188; }
+  .menu-btn.ghost { background: transparent; color: #c8ceff; border: 1px solid #5b6ee155; }
+
+  #nameInput {
+    padding: 10px 14px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #5b6ee188;
+    background: #0e1230;
+    color: #fff;
+    text-align: center;
+    width: 220px;
+    max-width: 80%;
+    margin-bottom: 6px;
+  }
+
+  .mode-card {
+    width: 290px;
+    max-width: 85%;
+    background: #0f1233;
+    border: 2px solid #1c2255;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 8px 0;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .mode-card:hover { border-color: #5b6ee1; transform: translateY(-2px); }
+  .mode-card h3 { font-size: 15px; color: #5b6ee1; margin-bottom: 6px; }
+  .mode-card p { font-size: 13px; color: #c8ceff; line-height: 1.4; margin: 0; }
+
+  #leaderboardList { width: 100%; max-width: 340px; max-height: 280px; overflow-y: auto; margin-bottom: 10px; }
+  .lb-row { display: flex; flex-direction: column; padding: 6px 10px; border-bottom: 1px solid #1c2255; font-size: 13px; text-align: left; }
+  .lb-top { display: flex; justify-content: space-between; align-items: center; }
+  .lb-rank { color: #ffe94a; margin-right: 6px; }
+  .lb-name { color: #fff; }
+  .lb-score { color: #7effa0; font-weight: bold; }
+  .lb-meta { color: #6a72b0; font-size: 11px; margin-top: 2px; }
+
+  #howToList { text-align: left; max-width: 360px; margin: 6px 0 14px; padding-left: 18px; color: #c8ceff; font-size: 14px; line-height: 1.6; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="gameWrap">
+  <canvas id="game" width="480" height="640"></canvas>
+
+  <div id="hud">
+    <span id="scoreDisplay">Score: 0</span>
+    <span id="linesDisplay">Lines: 0</span>
+    <span id="levelDisplay">Level: 1</span>
+  </div>
+
+  <button id="muteBtn" title="Toggle sound">🔊</button>
+
+  <div id="touchControls">
+    <div class="tbtn" id="btnLeft">◀</div>
+    <div class="tbtn" id="btnRotate">⟳</div>
+    <div class="tbtn" id="btnRight">▶</div>
+    <div class="tbtn" id="btnDown">▼</div>
+    <div class="tbtn" id="btnDrop">⤓</div>
+  </div>
+
+  <!-- ===================== NAME ENTRY ===================== -->
+  <div id="nameScreen" class="screen active">
+    <div class="logo">🧊 BLOCK STACKER</div>
+    <p class="subtitle">Enter your name to get started</p>
+    <input type="text" id="nameInput" placeholder="Your name" maxlength="14" autocomplete="off">
+    <button class="menu-btn primary" id="nameContinueBtn">Continue</button>
+  </div>
+
+  <!-- ===================== MAIN MENU ===================== -->
+  <div id="menuScreen" class="screen">
+    <div class="logo">🧊 BLOCK STACKER</div>
+    <div id="welcomeText" class="subtitle">Welcome, <span id="welcomeName">Player</span>! <button class="menu-btn ghost" id="editNameBtn" style="width:auto;padding:4px 10px;margin:0 0 0 6px;display:inline-block;">✏️</button></div>
+    <button class="menu-btn primary" id="newGameBtn">🎮 New Game</button>
+    <button class="menu-btn secondary" id="leaderboardBtn">🏆 Leaderboard</button>
+    <button class="menu-btn ghost" id="howToBtn">❓ How to Play</button>
+  </div>
+
+  <!-- ===================== MODE SELECT ===================== -->
+  <div id="modeSelectScreen" class="screen">
+    <div class="logo">Choose a Mode</div>
+    <p class="subtitle">Pick how you want to play</p>
+
+    <div class="mode-card" id="modeCardMarathon">
+      <h3>♾️ Marathon</h3>
+      <p>Classic endless stacking. Speed ramps up every level — survive as long as you can.</p>
+    </div>
+
+    <div class="mode-card" id="modeCardSprint">
+      <h3>⏱ Sprint (40 Lines)</h3>
+      <p>Clear 40 lines as fast as possible. Your finish time becomes your score.</p>
+    </div>
+
+    <button class="menu-btn ghost" id="backToMenuBtn">← Back</button>
+  </div>
+
+  <!-- ===================== LEADERBOARD ===================== -->
+  <div id="leaderboardScreen" class="screen">
+    <div class="logo">🏆 Leaderboard</div>
+    <p class="subtitle">Best scores on this device</p>
+    <div id="leaderboardList"></div>
+    <div id="leaderboardEmpty" class="subtitle" style="display:none;">No games played yet — go set a record!</div>
+    <button class="menu-btn ghost" id="lbBackBtn">← Back</button>
+  </div>
+
+  <!-- ===================== HOW TO PLAY ===================== -->
+  <div id="howToScreen" class="screen">
+    <div class="logo">❓ How to Play</div>
+    <ul id="howToList">
+      <li>Arrow keys (or the on-screen buttons) move and rotate the falling piece.</li>
+      <li>Down arrow soft-drops, Space hard-drops it instantly for bonus points.</li>
+      <li>Fill a horizontal line completely to clear it — clear 4 at once for a big bonus.</li>
+      <li><b>Marathon</b> never ends — it just gets faster. <b>Sprint</b> ends the instant you clear 40 lines.</li>
+      <li>The game ends if the stack reaches the top.</li>
+    </ul>
+    <button class="menu-btn ghost" id="howToBackBtn">← Back</button>
+  </div>
+
+  <!-- ===================== RESULTS ===================== -->
+  <div id="resultsScreen" class="screen">
+    <div class="logo">🧊 TOPPED OUT 🧊</div>
+    <div class="subtitle" id="resultsMeta">Player · Mode</div>
+    <div class="big-score" id="finalScore">0</div>
+    <p class="subtitle" id="resultsStat">Lines: 0</p>
+    <button class="menu-btn primary" id="playAgainBtn">🔁 Play Again</button>
+    <button class="menu-btn secondary" id="changeModeBtn">🎯 Change Mode</button>
+    <button class="menu-btn ghost" id="mainMenuBtn">🏠 Main Menu</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const screens = {
+    name: document.getElementById('nameScreen'),
+    menu: document.getElementById('menuScreen'),
+    modeSelect: document.getElementById('modeSelectScreen'),
+    leaderboard: document.getElementById('leaderboardScreen'),
+    howTo: document.getElementById('howToScreen'),
+    results: document.getElementById('resultsScreen')
+  };
+  function showScreen(name) {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const linesDisplay = document.getElementById('linesDisplay');
+  const levelDisplay = document.getElementById('levelDisplay');
+  const muteBtn = document.getElementById('muteBtn');
+
+  const nameInput = document.getElementById('nameInput');
+  const nameContinueBtn = document.getElementById('nameContinueBtn');
+  const welcomeName = document.getElementById('welcomeName');
+  const editNameBtn = document.getElementById('editNameBtn');
+  const newGameBtn = document.getElementById('newGameBtn');
+  const leaderboardBtn = document.getElementById('leaderboardBtn');
+  const howToBtn = document.getElementById('howToBtn');
+  const modeCardMarathon = document.getElementById('modeCardMarathon');
+  const modeCardSprint = document.getElementById('modeCardSprint');
+  const backToMenuBtn = document.getElementById('backToMenuBtn');
+  const leaderboardList = document.getElementById('leaderboardList');
+  const leaderboardEmpty = document.getElementById('leaderboardEmpty');
+  const lbBackBtn = document.getElementById('lbBackBtn');
+  const howToBackBtn = document.getElementById('howToBackBtn');
+  const resultsMeta = document.getElementById('resultsMeta');
+  const finalScore = document.getElementById('finalScore');
+  const resultsStat = document.getElementById('resultsStat');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const changeModeBtn = document.getElementById('changeModeBtn');
+  const mainMenuBtn = document.getElementById('mainMenuBtn');
+
+  let playerName = 'Player';
+  let selectedMode = 'marathon';
+  const MODES = {
+    marathon: { name: 'Marathon', sprint: false },
+    sprint:   { name: 'Sprint (40L)', sprint: true, target: 40 }
+  };
+
+  // ---------- audio ----------
+  let audioCtx = null;
+  let muted = localStorage.getItem('bsMuted') === '1';
+  muteBtn.textContent = muted ? '🔇' : '🔊';
+
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function tone(freq, duration, type, gainVal, glideTo, delay) {
+    if (muted) return;
+    try {
+      ensureAudio();
+      const t0 = audioCtx.currentTime + (delay || 0);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t0);
+      if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t0 + duration);
+      gain.gain.setValueAtTime(gainVal || 0.12, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration);
+    } catch (e) { /* ignore */ }
+  }
+  // Crystalline sound identity: clean square-wave blips for movement, a
+  // bright ascending sweep for line clears that scales with lines cleared.
+  const sfxClick = () => tone(500, 0.06, 'triangle', 0.08, 750);
+  const sfxMove = () => tone(220, 0.03, 'square', 0.04);
+  const sfxRotate = () => tone(380, 0.045, 'square', 0.05, 460);
+  const sfxLock = () => tone(140, 0.06, 'triangle', 0.08, 90);
+  const sfxLine = (n) => { for (let i = 0; i < n; i++) tone(440 + i * 140, 0.12, 'square', 0.08, 880 + i * 140, i * 0.05); };
+  const sfxTetris = () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, 'square', 0.09, f * 1.2, i * 0.06)); };
+  const sfxLevelUp = () => { tone(440, 0.09, 'triangle', 0.08, 660); tone(660, 0.12, 'triangle', 0.08, 880, 0.09); };
+  const sfxGameOver = () => tone(180, 0.5, 'sawtooth', 0.15, 40);
+
+  // ---------- background music: original minor-key arpeggio loop ----------
+  const MUSIC_NOTES = [330, 392, 494, 392, 330, 294, 330, 392, 294, 349, 440, 349, 294, 262, 294, 349];
+  let musicTimer = null, musicStep = 0;
+  function musicStepFn() {
+    const note = MUSIC_NOTES[musicStep % MUSIC_NOTES.length];
+    tone(note, 0.14, 'triangle', 0.04, note * 0.99);
+    musicStep++;
+  }
+  function startMusic() {
+    stopMusic();
+    musicStep = 0;
+    musicStepFn();
+    musicTimer = setInterval(musicStepFn, 150);
+  }
+  function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }
+
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    localStorage.setItem('bsMuted', muted ? '1' : '0');
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+  });
+
+  // ---------- leaderboard ----------
+  const LB_KEY = 'bsLeaderboard';
+  function loadLeaderboard() {
+    try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch (e) { return []; }
+  }
+  function saveScoreToLeaderboard(name, score, modeName) {
+    const list = loadLeaderboard();
+    list.push({ name, score, mode: modeName, date: new Date().toLocaleDateString() });
+    list.sort((a, b) => b.score - a.score);
+    localStorage.setItem(LB_KEY, JSON.stringify(list.slice(0, 10)));
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function renderLeaderboard() {
+    const list = loadLeaderboard();
+    if (list.length === 0) {
+      leaderboardList.innerHTML = '';
+      leaderboardEmpty.style.display = 'block';
+      return;
+    }
+    leaderboardEmpty.style.display = 'none';
+    leaderboardList.innerHTML = list.map((entry, i) => `
+      <div class="lb-row">
+        <div class="lb-top">
+          <span><span class="lb-rank">#${i + 1}</span><span class="lb-name">${escapeHtml(entry.name)}</span></span>
+          <span class="lb-score">${entry.score}</span>
+        </div>
+        <div class="lb-meta">${escapeHtml(entry.mode)} · ${escapeHtml(entry.date)}</div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- name / menu navigation ----------
+  playerName = localStorage.getItem('bsPlayerName') || 'Player';
+
+  nameContinueBtn.addEventListener('click', () => {
+    const typed = nameInput.value.trim();
+    playerName = typed.length > 0 ? typed : 'Player';
+    localStorage.setItem('bsPlayerName', playerName);
+    welcomeName.textContent = playerName;
+    sfxClick();
+    showScreen('menu');
+  });
+  nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') nameContinueBtn.click(); });
+
+  editNameBtn.addEventListener('click', () => {
+    sfxClick();
+    nameInput.value = playerName === 'Player' ? '' : playerName;
+    showScreen('name');
+  });
+
+  newGameBtn.addEventListener('click', () => { sfxClick(); showScreen('modeSelect'); });
+  leaderboardBtn.addEventListener('click', () => { sfxClick(); renderLeaderboard(); showScreen('leaderboard'); });
+  howToBtn.addEventListener('click', () => { sfxClick(); showScreen('howTo'); });
+  backToMenuBtn.addEventListener('click', () => { sfxClick(); showScreen('menu'); });
+  lbBackBtn.addEventListener('click', () => { sfxClick(); showScreen('menu'); });
+  howToBackBtn.addEventListener('click', () => { sfxClick(); showScreen('menu'); });
+  mainMenuBtn.addEventListener('click', () => { sfxClick(); showScreen('menu'); });
+  changeModeBtn.addEventListener('click', () => { sfxClick(); showScreen('modeSelect'); });
+
+  modeCardMarathon.addEventListener('click', () => startGame('marathon'));
+  modeCardSprint.addEventListener('click', () => startGame('sprint'));
+  playAgainBtn.addEventListener('click', () => { sfxClick(); startGame(selectedMode); });
+
+  welcomeName.textContent = playerName;
+
+  // ---------- tetromino definitions ----------
+  const COLS = 10, ROWS = 20, CELL = 24;
+  const BOARD_LEFT = 30, BOARD_TOP = 60;
+  const PREVIEW_X = BOARD_LEFT + COLS * CELL + 30;
+  const PREVIEW_Y = BOARD_TOP + 30;
+
+  const SHAPES = {
+    I: { color: '#5ac8ff', rot: [
+      [[0,1],[1,1],[2,1],[3,1]], [[2,0],[2,1],[2,2],[2,3]],
+      [[0,2],[1,2],[2,2],[3,2]], [[1,0],[1,1],[1,2],[1,3]] ] },
+    O: { color: '#ffe15a', rot: [
+      [[1,0],[2,0],[1,1],[2,1]], [[1,0],[2,0],[1,1],[2,1]],
+      [[1,0],[2,0],[1,1],[2,1]], [[1,0],[2,0],[1,1],[2,1]] ] },
+    T: { color: '#c07bff', rot: [
+      [[1,0],[0,1],[1,1],[2,1]], [[1,0],[1,1],[2,1],[1,2]],
+      [[0,1],[1,1],[2,1],[1,2]], [[1,0],[0,1],[1,1],[1,2]] ] },
+    S: { color: '#5affa0', rot: [
+      [[1,0],[2,0],[0,1],[1,1]], [[1,0],[1,1],[2,1],[2,2]],
+      [[1,1],[2,1],[0,2],[1,2]], [[0,0],[0,1],[1,1],[1,2]] ] },
+    Z: { color: '#ff5a5a', rot: [
+      [[0,0],[1,0],[1,1],[2,1]], [[2,0],[1,1],[2,1],[1,2]],
+      [[0,1],[1,1],[1,2],[2,2]], [[1,0],[0,1],[1,1],[0,2]] ] },
+    J: { color: '#5a7bff', rot: [
+      [[0,0],[0,1],[1,1],[2,1]], [[1,0],[2,0],[1,1],[1,2]],
+      [[0,1],[1,1],[2,1],[2,2]], [[1,0],[1,1],[0,2],[1,2]] ] },
+    L: { color: '#ff9a3d', rot: [
+      [[2,0],[0,1],[1,1],[2,1]], [[1,0],[1,1],[1,2],[2,2]],
+      [[0,1],[1,1],[2,1],[0,2]], [[0,0],[1,0],[1,1],[1,2]] ] }
+  };
+  const PIECE_TYPES = Object.keys(SHAPES);
+
+  let board, current, next, score, lines, level, gameRunning;
+  let fallTimer, softDrop, elapsedFrames;
+  let clearFlash = [];
+  let animId = null;
+
+  function newPiece(type) {
+    return { type, rotation: 0, x: 3, y: -1 };
+  }
+  function randomType() { return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)]; }
+
+  function cellsOf(piece) {
+    return SHAPES[piece.type].rot[piece.rotation].map(([cx, cy]) => [piece.x + cx, piece.y + cy]);
+  }
+
+  function collides(piece) {
+    for (const [x, y] of cellsOf(piece)) {
+      if (x < 0 || x >= COLS || y >= ROWS) return true;
+      if (y >= 0 && board[y][x]) return true;
+    }
+    return false;
+  }
+
+  function resetGame() {
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+    current = newPiece(randomType());
+    next = randomType();
+    score = 0;
+    lines = 0;
+    level = 1;
+    gameRunning = true;
+    softDrop = false;
+    elapsedFrames = 0;
+    fallTimer = fallInterval();
+    clearFlash = [];
+    updateHud();
+  }
+
+  function fallInterval() { return Math.max(8, 48 - (level - 1) * 4); }
+
+  function updateHud() {
+    scoreDisplay.textContent = 'Score: ' + score;
+    linesDisplay.textContent = 'Lines: ' + lines;
+    levelDisplay.textContent = 'Level: ' + level;
+  }
+
+  function lockPiece() {
+    sfxLock();
+    for (const [x, y] of cellsOf(current)) {
+      if (y >= 0) board[y][x] = SHAPES[current.type].color;
+    }
+    const fullRows = [];
+    for (let y = 0; y < ROWS; y++) if (board[y].every(c => c)) fullRows.push(y);
+
+    if (fullRows.length > 0) {
+      clearFlash = fullRows.slice();
+      if (fullRows.length === 4) sfxTetris(); else sfxLine(fullRows.length);
+      const points = [0, 100, 300, 500, 800][fullRows.length] * level;
+      score += points;
+      lines += fullRows.length;
+      const newLevel = Math.floor(lines / 10) + 1;
+      if (newLevel > level) { level = newLevel; sfxLevelUp(); }
+
+      board = board.filter((_, y) => !fullRows.includes(y));
+      while (board.length < ROWS) board.unshift(Array(COLS).fill(null));
+
+      if (MODES[selectedMode].sprint && lines >= MODES[selectedMode].target) {
+        finishSprint();
+        return;
+      }
+    }
+
+    current = newPiece(next);
+    next = randomType();
+    fallTimer = fallInterval();
+    if (collides(current)) endGame();
+    updateHud();
+  }
+
+  function finishSprint() {
+    gameRunning = false;
+    stopMusic();
+    const seconds = (elapsedFrames / 60);
+    score = Math.max(0, Math.round(100000 - elapsedFrames));
+    saveScoreToLeaderboard(playerName, score, MODES[selectedMode].name);
+    resultsMeta.textContent = playerName + ' · ' + MODES[selectedMode].name;
+    finalScore.textContent = seconds.toFixed(1) + 's';
+    resultsStat.textContent = 'Lines: ' + lines;
+    showScreen('results');
+  }
+
+  function endGame() {
+    if (!gameRunning) return;
+    gameRunning = false;
+    stopMusic();
+    sfxGameOver();
+    saveScoreToLeaderboard(playerName, score, MODES[selectedMode].name);
+    resultsMeta.textContent = playerName + ' · ' + MODES[selectedMode].name;
+    finalScore.textContent = score;
+    resultsStat.textContent = 'Lines: ' + lines;
+    showScreen('results');
+  }
+
+  function tryMove(dx, dy) {
+    if (!gameRunning) return false;
+    const moved = { ...current, x: current.x + dx, y: current.y + dy };
+    if (!collides(moved)) { current = moved; return true; }
+    return false;
+  }
+  function tryRotate() {
+    if (!gameRunning) return;
+    const rotated = { ...current, rotation: (current.rotation + 1) % 4 };
+    for (const kick of [0, -1, 1, -2, 2]) {
+      const test = { ...rotated, x: rotated.x + kick };
+      if (!collides(test)) { current = test; sfxRotate(); return; }
+    }
+  }
+  function hardDrop() {
+    if (!gameRunning) return;
+    let dist = 0;
+    while (tryMove(0, 1)) dist++;
+    score += dist * 2;
+    lockPiece();
+  }
+
+  // ---------- update ----------
+  function update() {
+    if (!gameRunning) return;
+    elapsedFrames++;
+
+    fallTimer--;
+    const interval = softDrop ? 3 : fallInterval();
+    if (fallTimer <= 0) {
+      if (!tryMove(0, 1)) lockPiece();
+      else if (softDrop) score += 1;
+      fallTimer = interval;
+    }
+
+    if (clearFlash.length && elapsedFrames % 40 === 0) clearFlash = [];
+  }
+
+  // ---------- input ----------
+  window.addEventListener('keydown', e => {
+    const active = document.activeElement;
+    if (active && active.tagName === 'INPUT') return;
+    if (!gameRunning) return;
+    if (e.key === 'ArrowLeft') { if (tryMove(-1, 0)) sfxMove(); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { if (tryMove(1, 0)) sfxMove(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { tryRotate(); e.preventDefault(); }
+    else if (e.key === 'ArrowDown') { softDrop = true; e.preventDefault(); }
+    else if (e.key === ' ') { hardDrop(); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', e => { if (e.key === 'ArrowDown') softDrop = false; });
+
+  function bindHold(el, onDown, onUp) {
+    el.addEventListener('mousedown', e => { e.preventDefault(); onDown(); });
+    el.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
+    if (onUp) {
+      el.addEventListener('mouseup', onUp);
+      el.addEventListener('mouseleave', onUp);
+      el.addEventListener('touchend', onUp);
+    }
+  }
+  bindHold(document.getElementById('btnLeft'), () => { ensureAudio(); if (tryMove(-1, 0)) sfxMove(); });
+  bindHold(document.getElementById('btnRight'), () => { ensureAudio(); if (tryMove(1, 0)) sfxMove(); });
+  bindHold(document.getElementById('btnRotate'), () => { ensureAudio(); tryRotate(); });
+  bindHold(document.getElementById('btnDown'), () => { softDrop = true; }, () => { softDrop = false; });
+  bindHold(document.getElementById('btnDrop'), () => { ensureAudio(); hardDrop(); });
+
+  // ---------- draw ----------
+  function drawCell(px, py, color) {
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    ctx.fillRect(px + 1, py + 1, CELL - 2, CELL - 2);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.strokeRect(px + 1, py + 1, CELL - 2, CELL - 2);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(91,110,225,0.5)';
+    ctx.strokeRect(BOARD_LEFT - 2, BOARD_TOP - 2, COLS * CELL + 4, ROWS * CELL + 4);
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const px = BOARD_LEFT + x * CELL, py = BOARD_TOP + y * CELL;
+        if (board[y][x]) {
+          drawCell(px, py, clearFlash.includes(y) ? '#ffffff' : board[y][x]);
+        } else {
+          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+          ctx.strokeRect(px, py, CELL, CELL);
+        }
+      }
+    }
+
+    if (gameRunning) {
+      const color = SHAPES[current.type].color;
+      for (const [x, y] of cellsOf(current)) {
+        if (y >= 0) drawCell(BOARD_LEFT + x * CELL, BOARD_TOP + y * CELL, color);
+      }
+
+      ctx.fillStyle = '#c8ceff';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('NEXT', PREVIEW_X, PREVIEW_Y - 10);
+      const nc = SHAPES[next].color;
+      SHAPES[next].rot[0].forEach(([cx, cy]) => {
+        drawCell(PREVIEW_X + cx * 20, PREVIEW_Y + cy * 20, nc);
+      });
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    animId = requestAnimationFrame(loop);
+  }
+
+  function startGame(mode) {
+    ensureAudio();
+    selectedMode = mode;
+    sfxClick();
+    resetGame();
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    startMusic();
+    if (!animId) loop();
+  }
+
+  draw();
+})();
+</script>
+
+</body>
+</html>
